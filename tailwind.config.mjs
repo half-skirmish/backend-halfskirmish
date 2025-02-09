@@ -10,6 +10,10 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        'pastel-cyan': '#A7F3D0', // Added pastel cyan color
+      },
+      fontFamily: {
+        sans: ['Montserrat', 'sans-serif'], // Updated to use Montserrat font
       },
     },
   },
