@@ -1,10 +1,22 @@
-// app/page.js or wherever you want to use the LoginPage component
-import LoginPage from './components/Login';  // Default import (without curly braces)
+'use client';
+import { useState } from 'react';
+import LoginPage from './components/Login';
+import Dashboard from './Screens/Dashboard';
 
 export default function Admin() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+  };
+
   return (
     <div>
-      <LoginPage /> {/* Using the LoginPage component */}
+      {!isLoggedIn ? (
+        <LoginPage onLogin={handleLogin} />
+      ) : (
+        <Dashboard />
+      )}
     </div>
   );
 }
