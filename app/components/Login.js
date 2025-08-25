@@ -1,4 +1,11 @@
-export default function LoginPage() {
+"use client";
+
+export default function LoginPage({ onLogin }) {
+  const handleLogin = (e) => {
+    e.preventDefault();
+    onLogin();
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 flex justify-center items-center font-montserrat">
       {/* Login Form Section */}
@@ -12,7 +19,7 @@ export default function LoginPage() {
           />
         </div>
 
-        <form className="flex-grow">
+        <form className="flex-grow" onSubmit={handleLogin}>
           <div className="mb-4">
             <label htmlFor="email" className="block text-sm font-medium text-gray-300">
               Email Address
