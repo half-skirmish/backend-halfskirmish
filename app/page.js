@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import LoginPage from './components/Login';
+import LoginPage from './Screens/Login';
 import Dashboard from './Screens/Dashboard';
 
 export default function Admin() {
