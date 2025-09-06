@@ -1,23 +1,44 @@
 'use client';
-
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import LoginPage from './Screens/Login';
-import Dashboard from './Screens/Dashboard';
 
-export default function Admin() {
+export default function Home() {
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
+
+  useEffect(() => {
+    // Only redirect after Clerk has loaded and user is authenticated
+    if (isLoaded && user) {
+      router.replace("/dashboard");
+    }
+  }, [isLoaded, user, router]);
+
+  // Show loading while Clerk is loading
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <SignedIn>
-        <header className="flex justify-between items-center p-4 shadow-md bg-white">
-          <h1 className="text-xl font-bold">Admin Dashboard</h1>
-          <UserButton afterSignOutUrl="/" />
-        </header>
-
-        <main className="flex-1 p-6 bg-gray-50">
-          <Dashboard />
-        </main>
+        {/* This will briefly show before redirect */}
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Redirecting to dashboard...</p>
+          </div>
+        </div>
       </SignedIn>
-
+      
       <SignedOut>
         <LoginPage />
       </SignedOut>
