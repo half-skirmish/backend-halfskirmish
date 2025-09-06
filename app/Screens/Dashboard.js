@@ -123,7 +123,7 @@ export default function Dashboard() {
             console.error('Sign out error:', error);
           }
         }}
-        className="text-red-600 hover:text-red-800 px-3 py-1 text-sm font-medium transition-colors border border-red-200 hover:border-red-400 rounded-md"
+        className="text-white bg-red-600 hover:bg-white hover:text-red-600 border border-red-600 px-3 py-2 text-sm font-semibold transition-colors  rounded-md"
         title="Sign Out"
       >
         Logout
