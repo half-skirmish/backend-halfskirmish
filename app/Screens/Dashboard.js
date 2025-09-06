@@ -35,14 +35,8 @@ export default function Dashboard() {
         return <HomeDashboard />;
       case "posts":
         return <PostsManagement />;
-      case "community":
-        return <CommunityManagement />;
-      case "seo":
-        return <SEOAnalytics />;
       case "media":
         return <MediaLibrary />;
-      case "comments":
-        return <CommentsManagement />;
       case "settings":
         return <SettingsPanel />;
       default:
@@ -97,9 +91,6 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center space-x-4">
-          <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
-            <Bell size={20} />
-          </button>
           
           <button className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
             + Create Post
@@ -115,7 +106,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <main className="ml-64 pt-16 p-6">
+      <main className="ml-64 mt-2 pt-16 p-6">
         <div className="max-w-7xl mx-auto">
           {renderMainContent()}
         </div>
