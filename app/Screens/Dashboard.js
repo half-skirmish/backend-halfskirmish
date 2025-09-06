@@ -16,9 +16,11 @@ import HomeDashboard from "../components/dashboard/HomeScreen";
 import PostsManagement from "../components/dashboard/PostsManagement";
 import MediaLibrary from "../components/dashboard/MediaLibrary";
 import SettingsPanel from '../components/dashboard/SettingsPanel';
+import CreatePostModal from '../components/modals/CreatePost';
 
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState("home");
+  const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
 
   // Navigation items
   const navItems = [
@@ -27,6 +29,15 @@ export default function Dashboard() {
     { id: "media", label: "Media", icon: Image },
     { id: "settings", label: "Settings", icon: Settings }
   ];
+
+  // Handle create post save
+  const handleSavePost = (postData) => {
+    console.log('Saving post:', postData);
+    // Here you would typically make an API call to save the post
+    // For now, we'll just close the modal and show an alert
+    setIsCreatePostModalOpen(false);
+    alert('Post saved successfully!');
+  };
 
   // Content for each section using imported components
   const renderMainContent = () => {
@@ -91,8 +102,10 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center space-x-4">
-          
-          <button className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+          <button 
+            onClick={() => setIsCreatePostModalOpen(true)}
+            className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
             + Create Post
           </button>
           
@@ -111,6 +124,13 @@ export default function Dashboard() {
           {renderMainContent()}
         </div>
       </main>
+
+      {/* Create Post Modal */}
+      <CreatePostModal 
+        isOpen={isCreatePostModalOpen}
+        onClose={() => setIsCreatePostModalOpen(false)}
+        onSave={handleSavePost}
+      />
     </div>
   );
 }
