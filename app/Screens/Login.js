@@ -1,16 +1,55 @@
 "use client";
 
-export default function LoginPage({ onLogin }) {
-  const handleLogin = (e) => {
+import { useState } from "react";
+import { useSignIn } from "@clerk/nextjs";
+
+export default function LoginPage() {
+  const { signIn, isLoaded } = useSignIn();
+  const [error, setError] = useState("");
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    onLogin();
+    setError("");
+
+    const form = new FormData(e.target);
+    const email = form.get("email");
+    const password = form.get("password");
+
+    if (!isLoaded) return;
+
+    try {
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (result.status === "complete") {
+        // Clerk will set the session automatically
+        window.location.reload(); // refresh to show Dashboard
+      } else {
+        console.log("Unexpected result:", result);
+      }
+    } catch (err) {
+      setError(err.errors ? err.errors[0].message : "Login failed");
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!isLoaded) return;
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy: "oauth_google",
+        redirectUrl: "/",
+        redirectUrlComplete: "/",
+      });
+    } catch (err) {
+      setError("Google login failed");
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-900 flex justify-center items-center font-montserrat">
-      {/* Login Form Section */}
       <div className="bg-gray-800 p-12 rounded-lg shadow-lg w-96 h-[550px] border-2 border-teal-500 flex flex-col">
-        {/* Website Logo */}
         <div className="text-center font-bold text-lg px-4 py-4 rounded-xl bg-slate-700 mb-8">
           Half Skirmish Blog Login
         </div>
@@ -44,6 +83,8 @@ export default function LoginPage({ onLogin }) {
             />
           </div>
 
+          {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+
           <button
             type="submit"
             className="w-full py-3 px-4 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50 text-sm"
@@ -52,18 +93,14 @@ export default function LoginPage({ onLogin }) {
           </button>
         </form>
 
-        {/* Additional Buttons */}
         <div className="mt-4 flex flex-col space-y-4">
           {/* Login with Google Button */}
           <button
             type="button"
+            onClick={handleGoogleLogin}
             className="w-12 h-12 flex items-center justify-center border-2 border-teal-500 rounded-full focus:outline-none mx-auto transition-all duration-300 ease-in-out hover:border-teal-400 hover:bg-border-teal-600 hover:scale-110"
           >
-            <img
-              src="/g-icon.webp" // Google Logo URL
-              alt="Google Logo"
-              className="w-6 h-6"
-            />
+            <img src="/g-icon.webp" alt="Google Logo" className="w-6 h-6" />
           </button>
 
           {/* Forgot Password Button */}
@@ -74,7 +111,6 @@ export default function LoginPage({ onLogin }) {
             Forgot Password?
           </button>
 
-          {/* Copyright Text */}
           <div className="mt-4 text-center text-sm text-gray-400">
             <p>&copy; 2025 Half Skirmish. All rights reserved.</p>
           </div>
