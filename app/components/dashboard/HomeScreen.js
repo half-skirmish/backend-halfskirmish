@@ -13,15 +13,7 @@ export default function HomeDashboard() {
             <FileText className="text-blue-500" size={24} />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Community Members</p>
-              <p className="text-2xl font-bold text-gray-900">5,678</p>
-            </div>
-            <Users className="text-green-500" size={24} />
-          </div>
-        </div>
+
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -29,15 +21,6 @@ export default function HomeDashboard() {
               <p className="text-2xl font-bold text-gray-900">890</p>
             </div>
             <Image className="text-purple-500" size={24} />
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Comments</p>
-              <p className="text-2xl font-bold text-gray-900">2,345</p>
-            </div>
-            <MessageSquare className="text-orange-500" size={24} />
           </div>
         </div>
       </div>
