@@ -1,8 +1,8 @@
 'use client';
 
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import Dashboard from "./Screens/Dashboard";
-import LoginPage from "./Screens/Login";
+import LoginPage from './Screens/Login';
+import Dashboard from './Screens/Dashboard';
 
 export default function Admin() {
   return (
@@ -12,6 +12,7 @@ export default function Admin() {
           <h1 className="text-xl font-bold">Admin Dashboard</h1>
           <UserButton afterSignOutUrl="/" />
         </header>
+
         <main className="flex-1 p-6 bg-gray-50">
           <Dashboard />
         </main>
