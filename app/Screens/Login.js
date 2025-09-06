@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useSignIn } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const { signIn, isLoaded } = useSignIn();
   const [error, setError] = useState("");
+  const router = useRouter();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,8 +26,14 @@ export default function LoginPage() {
       });
 
       if (result.status === "complete") {
-        // Clerk will set the session automatically
-        window.location.reload(); // refresh to show Dashboard
+        // Wait a bit for Clerk to fully update auth state
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Use window.location for immediate redirect
+        window.location.href = "/dashboard";
+        
+        // Alternative: Use router.push with replace
+        // router.replace("/dashboard");
       } else {
         console.log("Unexpected result:", result);
       }
@@ -39,8 +47,8 @@ export default function LoginPage() {
     try {
       await signIn.authenticateWithRedirect({
         strategy: "oauth_google",
-        redirectUrl: "/home",
-        redirectUrlComplete: "/home",
+        redirectUrl: "/dashboard",
+        redirectUrlComplete: "/dashboard",
       });
     } catch (err) {
       setError("Google login failed");
