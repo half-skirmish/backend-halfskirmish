@@ -1,22 +1,25 @@
 'use client';
-import { useState } from 'react';
-import LoginPage from './Screens/Login';
-import Dashboard from './Screens/Dashboard';
+
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import Dashboard from "./Screens/Dashboard";
+import LoginPage from "./Screens/Login";
 
 export default function Admin() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-  };
-
   return (
-    <div>
-      {!isLoggedIn ? (
-        <LoginPage onLogin={handleLogin} />
-      ) : (
-        <Dashboard />
-      )}
+    <div className="min-h-screen flex flex-col">
+      <SignedIn>
+        <header className="flex justify-between items-center p-4 shadow-md bg-white">
+          <h1 className="text-xl font-bold">Admin Dashboard</h1>
+          <UserButton afterSignOutUrl="/" />
+        </header>
+        <main className="flex-1 p-6 bg-gray-50">
+          <Dashboard />
+        </main>
+      </SignedIn>
+
+      <SignedOut>
+        <LoginPage />
+      </SignedOut>
     </div>
   );
 }
