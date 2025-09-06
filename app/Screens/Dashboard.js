@@ -88,35 +88,49 @@ export default function Dashboard() {
         </nav>
       </div>
 
-      {/* Top Bar */}
-      <div className="bg-white h-16 fixed right-0 top-0 left-64 px-6 border-b border-gray-200 flex items-center justify-between z-30">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <button 
-            onClick={() => setIsCreatePostModalOpen(true)}
-            className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            + Create Post
-          </button>
-          
-          <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
-            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-              <User size={16} className="text-gray-600" />
-            </div>
-            <span className="text-sm text-gray-700">Admin User</span>
-          </div>
-        </div>
+{/* Top Bar */}
+<div className="bg-white h-16 fixed right-0 top-0 left-64 px-6 border-b border-gray-200 flex items-center justify-between z-30">
+  <div className="flex items-center space-x-4">
+    <div className="relative">
+      <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+      <input
+        type="text"
+        placeholder="Search..."
+        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+    </div>
+  </div>
+  <div className="flex items-center space-x-4">
+    <button
+      onClick={() => setIsCreatePostModalOpen(true)}
+      className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+    >
+      + Create Post
+    </button>
+    <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
+      <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+        <User size={16} className="text-gray-600" />
       </div>
+      <span className="text-sm text-gray-700">Admin User</span>
+      
+      {/* Logout Button */}
+      <button
+        onClick={async () => {
+          try {
+            await window.Clerk.signOut();
+            // The UserButton component will handle the redirect
+          } catch (error) {
+            console.error('Sign out error:', error);
+          }
+        }}
+        className="text-red-600 hover:text-red-800 px-3 py-1 text-sm font-medium transition-colors border border-red-200 hover:border-red-400 rounded-md"
+        title="Sign Out"
+      >
+        Logout
+      </button>
+    </div>
+  </div>
+</div>
 
       {/* Main Content */}
       <main className="ml-64 mt-2 pt-16 p-6">
