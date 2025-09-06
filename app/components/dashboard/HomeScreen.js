@@ -1,9 +1,9 @@
-import { FileText, Users, Image, MessageSquare } from "lucide-react";
+import { FileText, Users, Image, MessageSquare, User } from "lucide-react";
 
 export default function HomeDashboard() {
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -11,6 +11,16 @@ export default function HomeDashboard() {
               <p className="text-2xl font-bold text-gray-900">1,234</p>
             </div>
             <FileText className="text-blue-500" size={24} />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">My Posts</p>
+              <p className="text-2xl font-bold text-gray-900">156</p>
+            </div>
+            <User className="text-green-500" size={24} />
           </div>
         </div>
 
