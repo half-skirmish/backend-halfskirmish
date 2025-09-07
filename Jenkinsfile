@@ -8,6 +8,10 @@ pipeline {
         DEPLOYMENT_NAME = "halfskirmish-admin"
         DOCKER_HOST     = "tcp://10.243.52.185:2375"
         APP_NETWORK     = "app"
+
+        // Pull from Jenkins credentials
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = credentials('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY')
+        CLERK_SECRET_KEY                  = credentials('CLERK_SECRET_KEY')
     }
 
     stages {
@@ -15,7 +19,11 @@ pipeline {
             steps {
                 script {
                     echo 'Building Docker Image...'
-                    sh "docker build -t ${IMAGE_NAME}:${TAG} ."
+                    sh """
+                        docker build \
+                          --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} \
+                          -t ${IMAGE_NAME}:${TAG} .
+                    """
                 }
             }
         }
@@ -43,13 +51,13 @@ pipeline {
                 script {
                     echo "Deploying ${DEPLOYMENT_NAME} on remote Docker host..."
 
-                    // Create app network if not exists
+                    // Ensure network exists
                     sh """
                         docker -H ${DOCKER_HOST} network inspect ${APP_NETWORK} >/dev/null 2>&1 || \
                         docker -H ${DOCKER_HOST} network create ${APP_NETWORK}
                     """
 
-                    // Stop and remove old container if running
+                    // Stop/remove old container
                     sh """
                         docker -H ${DOCKER_HOST} ps -q --filter name=${DEPLOYMENT_NAME} | grep -q . && \
                         docker -H ${DOCKER_HOST} stop ${DEPLOYMENT_NAME} || true
@@ -59,10 +67,12 @@ pipeline {
                         docker -H ${DOCKER_HOST} rm ${DEPLOYMENT_NAME} || true
                     """
 
-                    // Run new container
+                    // Run new container with env vars
                     sh """
                         docker -H ${DOCKER_HOST} run -d --name ${DEPLOYMENT_NAME} \\
                         --network ${APP_NETWORK} \\
+                        -e NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} \\
+                        -e CLERK_SECRET_KEY=${CLERK_SECRET_KEY} \\
                         ${REGISTRY}/${IMAGE_NAME}:${TAG}
                     """
                 }
