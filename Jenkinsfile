@@ -8,6 +8,10 @@ pipeline {
         DEPLOYMENT_NAME = "halfskirmish-admin"
         DOCKER_HOST     = "tcp://10.243.52.185:2375"
         APP_NETWORK     = "app"
+
+        // Clerk environment variables (store them securely in Jenkins Credentials/Env)
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = credentials('clerk-publishable-key')
+        CLERK_SECRET_KEY                  = credentials('clerk-secret-key')
     }
 
     stages {
@@ -15,7 +19,12 @@ pipeline {
             steps {
                 script {
                     echo 'Building Docker Image...'
-                    sh "docker build -t ${IMAGE_NAME}:${TAG} ."
+                    sh """
+                        docker build \
+                          --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} \
+                          --build-arg CLERK_SECRET_KEY=${CLERK_SECRET_KEY} \
+                          -t ${IMAGE_NAME}:${TAG} .
+                    """
                 }
             }
         }
@@ -59,10 +68,12 @@ pipeline {
                         docker -H ${DOCKER_HOST} rm ${DEPLOYMENT_NAME} || true
                     """
 
-                    // Run new container
+                    // Run new container with env vars
                     sh """
                         docker -H ${DOCKER_HOST} run -d --name ${DEPLOYMENT_NAME} \\
                         --network ${APP_NETWORK} \\
+                        -e NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} \\
+                        -e CLERK_SECRET_KEY=${CLERK_SECRET_KEY} \\
                         ${REGISTRY}/${IMAGE_NAME}:${TAG}
                     """
                 }
