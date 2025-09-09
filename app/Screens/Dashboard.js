@@ -29,8 +29,7 @@ export default function Dashboard() {
   const navItems = [
     { id: "home", label: "Home", icon: Home },
     { id: "posts", label: "Posts", icon: FileText },
-    { id: "media", label: "Media", icon: Image },
-    { id: "settings", label: "Settings", icon: Settings }
+    { id: "media", label: "Media", icon: Image }
   ];
 
   // Handle create post save
