@@ -58,7 +58,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-900 flex justify-center items-center font-montserrat">
       <div className="bg-gray-800 p-12 rounded-lg shadow-lg w-96 h-[550px] border-2 border-teal-500 flex flex-col">
-        <div className="text-center font-bold text-lg px-2 py-2 rounded-xl mb-8">
+        <div className="text-center text-white font-bold text-lg px-2 py-2 rounded-xl mb-8">
           Half Skirmish Blog Login
         </div>
 
