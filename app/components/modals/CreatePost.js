@@ -10,7 +10,8 @@ import {
   Eye,
   EyeOff,
   Save,
-  List
+  List,
+  Loader2
 } from "lucide-react";
 
 const CreatePostModal = ({ isOpen, onClose, onSave }) => {
@@ -19,13 +20,20 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
     content: '',
     tags: '',
     keywords: '',
+    coverImageUrl: '',
     status: 'draft'
   });
   
   const [showPreview, setShowPreview] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   const handleInputChange = (field, value) => {
     setPostData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
   const insertFormatting = (format) => {
@@ -80,16 +88,98 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
     }, 0);
   };
 
-  const handleSave = () => {
-    onSave(postData);
-    setPostData({ title: '', content: '', tags: '', keywords: '', status: 'draft' });
-    setShowPreview(true);
+  const handleSave = async () => {
+    // Validation
+    if (!postData.title.trim()) {
+      setError('Title is required');
+      return;
+    }
+    if (!postData.content.trim()) {
+      setError('Content is required');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Get token from localStorage (assuming you store it there after login)
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('You must be logged in to create a post');
+        setIsLoading(false);
+        return;
+      }
+
+      // Prepare the payload to match your backend expectations
+      const payload = {
+        title: postData.title.trim(),
+        content: postData.content.trim(),
+        coverImageUrl: postData.coverImageUrl.trim(),
+        tags: postData.tags.trim() ? postData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []
+      };
+
+      const response = await fetch(`${API_BASE_URL}/add-blog`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create blog post');
+      }
+
+      if (data.error) {
+        throw new Error(data.message || 'Failed to create blog post');
+      }
+
+      // Success - call the onSave callback with the created blog data
+      if (onSave) {
+        onSave(data.blog);
+      }
+
+      // Reset form and close modal
+      setPostData({ 
+        title: '', 
+        content: '', 
+        tags: '', 
+        keywords: '', 
+        coverImageUrl: '', 
+        status: 'draft' 
+      });
+      setShowPreview(true);
+      onClose();
+
+      // Optional: Show success message (you can implement a toast notification)
+      console.log('Blog post created successfully:', data.blog);
+
+    } catch (error) {
+      console.error('Error creating blog post:', error);
+      setError(error.message || 'Failed to create blog post. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
+    if (isLoading) return; // Prevent closing while saving
+    
     onClose();
-    setPostData({ title: '', content: '', tags: '', keywords: '', status: 'draft' });
+    setPostData({ 
+      title: '', 
+      content: '', 
+      tags: '', 
+      keywords: '', 
+      coverImageUrl: '', 
+      status: 'draft' 
+    });
     setShowPreview(true);
+    setError('');
   };
 
   const renderMarkdown = (text) => {
@@ -125,6 +215,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
             title={showPreview ? "Hide Preview" : "Show Preview"}
+            disabled={isLoading}
           >
             {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
             <span className="text-sm font-medium">
@@ -134,11 +225,23 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
           <button 
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+            disabled={isLoading}
           >
             <X size={24} />
           </button>
         </div>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mx-4 mt-4">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -150,7 +253,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
             {/* Post Title */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Post Title
+                Post Title *
               </label>
               <input
                 type="text"
@@ -158,6 +261,22 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                 onChange={(e) => handleInputChange('title', e.target.value)}
                 placeholder="Enter your post title..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Cover Image URL */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Cover Image URL (optional)
+              </label>
+              <input
+                type="url"
+                value={postData.coverImageUrl}
+                onChange={(e) => handleInputChange('coverImageUrl', e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isLoading}
               />
             </div>
 
@@ -170,6 +289,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                     onClick={() => insertFormatting('bold')}
                     className="p-2 hover:bg-gray-200 rounded transition-colors"
                     title="Bold"
+                    disabled={isLoading}
                   >
                     <Bold size={18} />
                   </button>
@@ -177,6 +297,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                     onClick={() => insertFormatting('italic')}
                     className="p-2 hover:bg-gray-200 rounded transition-colors"
                     title="Italic"
+                    disabled={isLoading}
                   >
                     <Italic size={18} />
                   </button>
@@ -190,6 +311,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                       onClick={() => insertFormatting(`h${level}`)}
                       className="px-2 py-1 hover:bg-gray-200 rounded transition-colors text-sm font-medium"
                       title={`Heading ${level}`}
+                      disabled={isLoading}
                     >
                       H{level}
                     </button>
@@ -202,6 +324,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                     onClick={() => insertFormatting('link')}
                     className="p-2 hover:bg-gray-200 rounded transition-colors"
                     title="Insert Link"
+                    disabled={isLoading}
                   >
                     <Link size={18} />
                   </button>
@@ -209,6 +332,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                     onClick={() => insertFormatting('image')}
                     className="p-2 hover:bg-gray-200 rounded transition-colors"
                     title="Insert Image"
+                    disabled={isLoading}
                   >
                     <Image size={18} />
                   </button>
@@ -216,6 +340,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                     onClick={() => insertFormatting('list')}
                     className="p-2 hover:bg-gray-200 rounded transition-colors"
                     title="Insert List"
+                    disabled={isLoading}
                   >
                     <List size={18} />
                   </button>
@@ -226,7 +351,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
             {/* Content Editor */}
             <div className="flex-1 flex flex-col mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Content
+                Content *
               </label>
               <textarea
                 id="post-content"
@@ -234,6 +359,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                 onChange={(e) => handleInputChange('content', e.target.value)}
                 placeholder="Write your post content here... Use the toolbar above for formatting."
                 className="flex-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm min-h-0"
+                disabled={isLoading}
               />
             </div>
 
@@ -247,8 +373,9 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                   type="text"
                   value={postData.tags}
                   onChange={(e) => handleInputChange('tags', e.target.value)}
-                  placeholder="tag1, tag2, tag3"
+                  placeholder="Next.js, React, Web Development"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -261,6 +388,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                   onChange={(e) => handleInputChange('keywords', e.target.value)}
                   placeholder="keyword1, keyword2, keyword3"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -275,6 +403,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                   value={postData.status}
                   onChange={(e) => handleInputChange('status', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  disabled={isLoading}
                 >
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
@@ -286,15 +415,26 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                 <button
                   onClick={handleClose}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                  disabled={isLoading}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 >
-                  <Save size={16} />
-                  Save Post
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      Save Post
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -309,6 +449,20 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
             </div>
             <div className="flex-1 overflow-auto p-6">
               <div className="bg-white rounded-lg shadow-sm p-6 min-h-full">
+                {/* Preview Cover Image */}
+                {postData.coverImageUrl && (
+                  <div className="mb-6">
+                    <img
+                      src={postData.coverImageUrl}
+                      alt="Cover"
+                      className="w-full h-48 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+                
                 {/* Preview Title */}
                 {postData.title && (
                   <h1 className="text-3xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">
@@ -337,9 +491,11 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                         <h4 className="text-sm font-medium text-gray-700 mb-2">Tags:</h4>
                         <div className="flex flex-wrap gap-2">
                           {postData.tags.split(',').map((tag, index) => (
-                            <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              {tag.trim()}
-                            </span>
+                            tag.trim() && (
+                              <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                {tag.trim()}
+                              </span>
+                            )
                           ))}
                         </div>
                       </div>
@@ -350,9 +506,11 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                         <h4 className="text-sm font-medium text-gray-700 mb-2">Keywords:</h4>
                         <div className="flex flex-wrap gap-2">
                           {postData.keywords.split(',').map((keyword, index) => (
-                            <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                              {keyword.trim()}
-                            </span>
+                            keyword.trim() && (
+                              <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                {keyword.trim()}
+                              </span>
+                            )
                           ))}
                         </div>
                       </div>
