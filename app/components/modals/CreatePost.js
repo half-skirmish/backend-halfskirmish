@@ -28,6 +28,10 @@ const CreatePostModal = ({ isOpen, onClose, onSave, editingBlog }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageAlt, setImageAlt] = useState('');
+  const [uploadedImage, setUploadedImage] = useState(null);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -60,6 +64,66 @@ const CreatePostModal = ({ isOpen, onClose, onSave, editingBlog }) => {
     setPostData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (error) setError('');
+  };
+
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setError('Image size should be less than 5MB');
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadedImage({
+          file,
+          dataUrl: e.target.result,
+          name: file.name
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const insertImageIntoContent = () => {
+    const textarea = document.getElementById('post-content');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    
+    let imageMarkdown = '';
+    if (uploadedImage) {
+      // For uploaded images, use the data URL temporarily
+      // In a real app, you'd upload to a server and get a URL
+      imageMarkdown = `![${imageAlt || uploadedImage.name}](${uploadedImage.dataUrl})`;
+    } else if (imageUrl) {
+      imageMarkdown = `![${imageAlt || 'Image'}](${imageUrl})`;
+    }
+
+    if (imageMarkdown) {
+      const newContent = postData.content.substring(0, start) + 
+                        '\n\n' + imageMarkdown + '\n\n' + 
+                        postData.content.substring(end);
+      handleInputChange('content', newContent);
+      
+      // Close modal and reset
+      setShowImageModal(false);
+      setImageUrl('');
+      setImageAlt('');
+      setUploadedImage(null);
+      
+      // Focus back to textarea
+      setTimeout(() => {
+        textarea.focus();
+        const newPosition = start + imageMarkdown.length + 4; // +4 for the newlines
+        textarea.setSelectionRange(newPosition, newPosition);
+      }, 0);
+    }
   };
 
   const insertFormatting = (format) => {
@@ -226,21 +290,31 @@ const CreatePostModal = ({ isOpen, onClose, onSave, editingBlog }) => {
     setShowPreview(true);
     setError('');
     setIsEditMode(false);
+    setShowImageModal(false);
+    setImageUrl('');
+    setImageAlt('');
+    setUploadedImage(null);
   };
 
   const renderMarkdown = (text) => {
     return text
+      // Process images first to avoid conflicts with other replacements
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded my-2 block" />')
+      // Then process links
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-blue-600 hover:underline">$1</a>')
+      // Text formatting
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Headings
       .replace(/^##### (.*$)/gm, '<h5 class="text-sm font-bold mb-2 mt-4">$1</h5>')
       .replace(/^#### (.*$)/gm, '<h4 class="text-base font-bold mb-2 mt-4">$1</h4>')
       .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold mb-3 mt-4">$1</h3>')
       .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mb-3 mt-4">$1</h2>')
       .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-4 mt-4">$1</h1>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-blue-600 hover:underline">$1</a>')
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded my-2" />')
+      // Lists
       .replace(/^- (.*$)/gm, '<li class="ml-4">$1</li>')
       .replace(/(<li.*<\/li>)/s, '<ul class="list-disc pl-4 mb-4">$1</ul>')
+      // Paragraphs and line breaks
       .replace(/\n\n/g, '</p><p class="mb-4">')
       .replace(/\n/g, '<br>');
   };
@@ -377,7 +451,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave, editingBlog }) => {
                     <Link size={18} />
                   </button>
                   <button
-                    onClick={() => insertFormatting('image')}
+                    onClick={() => setShowImageModal(true)}
                     className="p-2 hover:bg-gray-200 rounded transition-colors"
                     title="Insert Image"
                     disabled={isLoading}
@@ -570,6 +644,164 @@ const CreatePostModal = ({ isOpen, onClose, onSave, editingBlog }) => {
           </div>
         )}
       </div>
+
+      {/* Image Insertion Modal */}
+      {showImageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Insert Image</h3>
+              <button
+                onClick={() => {
+                  setShowImageModal(false);
+                  setImageUrl('');
+                  setImageAlt('');
+                  setUploadedImage(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Upload Image Option */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Image
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <Image size={24} className="text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-600">
+                      Click to upload an image
+                    </span>
+                    <span className="text-xs text-gray-400 mt-1">
+                      PNG, JPG, GIF up to 5MB
+                    </span>
+                  </label>
+                </div>
+
+                {uploadedImage && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={uploadedImage.dataUrl}
+                        alt="Preview"
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {uploadedImage.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(uploadedImage.file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setUploadedImage(null)}
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* OR Divider */}
+              <div className="flex items-center">
+                <div className="flex-1 border-t border-gray-200"></div>
+                <span className="px-3 text-sm text-gray-500 bg-white">OR</span>
+                <div className="flex-1 border-t border-gray-200"></div>
+              </div>
+
+              {/* Image URL Option */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Image URL
+                </label>
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Alt Text */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Alt Text (optional)
+                </label>
+                <input
+                  type="text"
+                  value={imageAlt}
+                  onChange={(e) => setImageAlt(e.target.value)}
+                  placeholder="Describe the image for accessibility"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Preview */}
+              {(imageUrl || uploadedImage) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Preview
+                  </label>
+                  <div className="border border-gray-200 rounded-lg p-2">
+                    <img
+                      src={uploadedImage ? uploadedImage.dataUrl : imageUrl}
+                      alt={imageAlt || 'Preview'}
+                      className="max-w-full h-auto max-h-40 rounded"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <div className="hidden text-sm text-red-500 p-4 text-center">
+                      Failed to load image. Please check the URL.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowImageModal(false);
+                  setImageUrl('');
+                  setImageAlt('');
+                  setUploadedImage(null);
+                }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={insertImageIntoContent}
+                disabled={!imageUrl && !uploadedImage}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Insert Image
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
