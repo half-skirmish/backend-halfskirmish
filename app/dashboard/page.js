@@ -6,9 +6,9 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const handleLogout = () => {
-    // Clear the token cookie
-    document.cookie = "token=; path=/; max-age=0";
-    // Redirect to login page
+    // Clear token from localStorage
+    localStorage.removeItem('token');
+    // Redirect to login
     router.push("/login");
   };
 
