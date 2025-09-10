@@ -7,29 +7,35 @@ import {
   Plus,
   FilePenLine,
   Trash2,
-  UserCircle2
+  UserCircle2,
+  Search,
+  Filter,
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
+import CreatePostModal from '../components/modals/CreatePost';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState(null); // State to hold user data
+  const [user, setUser] = useState(null);
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBlog, setEditingBlog] = useState(null); // null for create, blog object for edit
 
-  // Effect to fetch user and all blogs on component mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       router.replace('/login');
       return;
     }
-    
+
     const initializeDashboard = async (authToken) => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch user and blogs concurrently
         const [userResponse, blogsResponse] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/get-user`, {
             headers: { 'Authorization': `Bearer ${authToken}` }
@@ -44,16 +50,12 @@ export default function DashboardPage() {
 
         const userData = await userResponse.json();
         const blogsData = await blogsResponse.json();
-        
+
         if (userData.error) throw new Error(userData.message);
         if (blogsData.error) throw new Error(blogsData.message);
 
-        // Set user data to state
         setUser(userData.user);
-        
-        // Set ALL blogs to state (no longer filtering)
         setBlogs(blogsData.blogs);
-
       } catch (err) {
         setError(err.message);
       } finally {
@@ -64,11 +66,8 @@ export default function DashboardPage() {
     initializeDashboard(token);
   }, [router]);
 
-  // Function to handle deleting a blog
   const handleDelete = async (blogId) => {
-    if (!window.confirm('Are you sure you want to delete this post?')) {
-      return;
-    }
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
 
     const token = localStorage.getItem('token');
     try {
@@ -79,12 +78,53 @@ export default function DashboardPage() {
 
       const data = await response.json();
       if (!response.ok || data.error) throw new Error(data.message || 'Failed to delete post');
-      
-      setBlogs(currentBlogs => currentBlogs.filter(blog => blog._id !== blogId));
 
+      setBlogs(currentBlogs => currentBlogs.filter(blog => blog._id !== blogId));
     } catch (err) {
       alert(`Error: ${err.message}`);
     }
+  };
+
+  const handleEdit = async (blogId) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/get-blog/${blogId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.error) throw new Error(data.message || 'Failed to fetch blog');
+
+      setEditingBlog(data.blog);
+      setIsModalOpen(true);
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const handleCreatePost = () => {
+    setEditingBlog(null); // Reset editing blog for create mode
+    setIsModalOpen(true);
+  };
+
+  const handleModalSave = (savedBlog) => {
+    if (editingBlog) {
+      // Update existing blog in the list
+      setBlogs(currentBlogs => 
+        currentBlogs.map(blog => 
+          blog._id === savedBlog._id ? savedBlog : blog
+        )
+      );
+    } else {
+      // Add new blog to the list
+      setBlogs(currentBlogs => [savedBlog, ...currentBlogs]);
+    }
+    setEditingBlog(null);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditingBlog(null);
   };
 
   const handleLogout = () => {
@@ -92,83 +132,175 @@ export default function DashboardPage() {
     router.replace("/login");
   };
 
-  const formatDate = (isoString) => new Date(isoString).toLocaleDateString('en-CA');
+  const formatDate = (isoString) => new Date(isoString).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  });
+
+  const filteredBlogs = blogs.filter(blog =>
+    blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    blog.author.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const userBlogsCount = blogs.filter(blog => blog.author.id === user?.id).length;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <header className="flex flex-wrap justify-between items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">All Blog Posts</h1>
-            <p className="text-slate-400 mt-1">Create, edit, and manage posts.</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-3">
-              <UserCircle2 size={32} className="text-slate-400" />
-              <span className="font-medium text-slate-200">{user?.name || 'Loading...'}</span>
+    <div className="min-h-screen bg-[#f0f2f5]">
+      {/* Navigation Bar */}
+      <nav className="border-b border-white/20 bg-white/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            {/* Left Side: Username */}
+            <div className="flex items-center space-x-3 bg-white/60 backdrop-blur-sm px-4 py-2.5 rounded-full border border-white/20 shadow-sm">
+              <UserCircle2 size={24} className="text-gray-500" />
+              <span className="font-medium text-gray-700">{user?.name || 'Loading...'}</span>
             </div>
-            <button className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors">
-              <Plus size={20}/>
-              <span>Create New Post</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-              aria-label="Logout"
-            >
-              <LogOut size={20} />
-            </button>
-          </div>
-        </header>
 
-        <div className="bg-slate-800/50 p-4 rounded-lg shadow-lg">
-          <table className="w-full text-left">
-            <thead className="border-b border-slate-700">
-              <tr>
-                <th className="p-4 text-sm font-semibold text-slate-400">Title</th>
-                <th className="p-4 text-sm font-semibold text-slate-400">Author</th>
-                <th className="p-4 text-sm font-semibold text-slate-400">Date Published</th>
-                <th className="p-4 text-sm font-semibold text-slate-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr><td colSpan="4" className="text-center p-8 text-slate-400">Loading posts...</td></tr>
-              )}
-              {error && (
-                <tr><td colSpan="4" className="text-center p-8 text-red-400">Error: {error}</td></tr>
-              )}
-              {!loading && !error && blogs.map((post) => (
-                <tr key={post._id} className="border-b border-slate-800 hover:bg-slate-700/50">
-                  <td className="p-4 font-medium">{post.title}</td>
-                  <td className="p-4 text-slate-300">{post.author.name}</td>
-                  <td className="p-4 text-slate-400">{formatDate(post.createdAt)}</td>
-                  <td className="p-4">
-                    <div className="flex space-x-4">
-                      {/* --- CONDITIONAL RENDERING FOR BUTTONS --- */}
-                      {/* Show buttons only if the logged-in user is the author */}
-                      {user?.id === post.author.id && (
-                        <>
-                          <button className="text-blue-400 hover:text-blue-300 transition-colors" aria-label="Edit Post">
-                            <FilePenLine size={20} />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(post._id)}
-                            className="text-red-500 hover:text-red-400 transition-colors" 
-                            aria-label="Delete Post"
-                          >
-                            <Trash2 size={20} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            {/* Right Side: Create Post + Logout */}
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={handleCreatePost}
+                className="group relative overflow-hidden bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                <div className="relative flex justify-center items-center space-x-2">
+                  <Plus size={20} />
+                  <span>Create Post</span>
+                </div>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="p-2.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200"
+                aria-label="Logout"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Hero Section */}
+        <div className="mb-10">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Posts</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">{blogs.length}</p>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <TrendingUp className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Your Posts</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">{userBlogsCount}</p>
+                </div>
+                <div className="p-3 bg-purple-100 rounded-full">
+                  <FilePenLine className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">This Month</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">
+                    {blogs.filter(blog => {
+                      const blogDate = new Date(blog.createdAt);
+                      const currentDate = new Date();
+                      return blogDate.getMonth() === currentDate.getMonth() && 
+                             blogDate.getFullYear() === currentDate.getFullYear();
+                    }).length}
+                  </p>
+                </div>
+                <div className="p-3 bg-emerald-100 rounded-full">
+                  <Calendar className="w-6 h-6 text-emerald-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-start">
+            <div className="relative max-w-md w-full">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={20}
+              />
+              <input
+                type="text"
+                placeholder="Search posts or authors"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white/70 backdrop-blur-sm border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/30 transition-all"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Blog Posts Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading && <p className="col-span-full text-center text-gray-500">Loading...</p>}
+          {error && <p className="col-span-full text-center text-red-500">{error}</p>}
+          {!loading && !error && filteredBlogs.length === 0 && (
+            <p className="col-span-full text-center text-gray-500">No posts found.</p>
+          )}
+
+          {!loading && !error && filteredBlogs.map((post, index) => (
+            <div
+              key={post._id}
+              className={`bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-300 animate-fadeIn`}
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-900">{post.title}</h3>
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={() => handleEdit(post._id)}
+                    className="p-1.5 rounded-full text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition"
+                    title="Edit post"
+                  >
+                    <FilePenLine size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(post._id)} 
+                    className="p-1.5 rounded-full text-gray-500 hover:text-red-600 hover:bg-red-50 transition"
+                    title="Delete post"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 line-clamp-3">{post.content}</p>
+              <div className="flex justify-between items-center mt-4 text-xs text-gray-400">
+                <span>By {post.author.name}</span>
+                <span>{formatDate(post.createdAt)}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </main>
+
+      {/* Create/Edit Post Modal */}
+      <CreatePostModal 
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        onSave={handleModalSave}
+        editingBlog={editingBlog}
+      />
     </div>
   );
 }
