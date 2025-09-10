@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   X,
   Bold,
@@ -14,7 +14,7 @@ import {
   Loader2
 } from "lucide-react";
 
-const CreatePostModal = ({ isOpen, onClose, onSave }) => {
+const CreatePostModal = ({ isOpen, onClose, onSave, editingBlog }) => {
   const [postData, setPostData] = useState({
     title: '',
     content: '',
@@ -27,8 +27,34 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
   const [showPreview, setShowPreview] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+  // Effect to handle editing mode initialization
+  useEffect(() => {
+    if (editingBlog) {
+      setIsEditMode(true);
+      setPostData({
+        title: editingBlog.title || '',
+        content: editingBlog.content || '',
+        tags: editingBlog.tags ? editingBlog.tags.join(', ') : '',
+        keywords: '', // Keywords might not be in the blog object
+        coverImageUrl: editingBlog.coverImageUrl || '',
+        status: 'published' // Assuming existing blogs are published
+      });
+    } else {
+      setIsEditMode(false);
+      setPostData({
+        title: '',
+        content: '',
+        tags: '',
+        keywords: '',
+        coverImageUrl: '',
+        status: 'draft'
+      });
+    }
+  }, [editingBlog]);
 
   const handleInputChange = (field, value) => {
     setPostData(prev => ({ ...prev, [field]: value }));
@@ -103,10 +129,10 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
     setError('');
 
     try {
-      // Get token from localStorage (assuming you store it there after login)
+      // Get token from localStorage
       const token = localStorage.getItem('token');
       if (!token) {
-        setError('You must be logged in to create a post');
+        setError('You must be logged in to create/edit a post');
         setIsLoading(false);
         return;
       }
@@ -119,26 +145,44 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
         tags: postData.tags.trim() ? postData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []
       };
 
-      const response = await fetch(`${API_BASE_URL}/add-blog`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
+      let response;
+      let endpoint;
+
+      if (isEditMode) {
+        // Edit existing blog
+        endpoint = `${API_BASE_URL}/edit-blog/${editingBlog._id}`;
+        response = await fetch(endpoint, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        // Create new blog
+        endpoint = `${API_BASE_URL}/add-blog`;
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+      }
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create blog post');
+        throw new Error(data.message || `Failed to ${isEditMode ? 'update' : 'create'} blog post`);
       }
 
       if (data.error) {
-        throw new Error(data.message || 'Failed to create blog post');
+        throw new Error(data.message || `Failed to ${isEditMode ? 'update' : 'create'} blog post`);
       }
 
-      // Success - call the onSave callback with the created blog data
+      // Success - call the onSave callback with the created/updated blog data
       if (onSave) {
         onSave(data.blog);
       }
@@ -153,14 +197,15 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
         status: 'draft' 
       });
       setShowPreview(true);
+      setIsEditMode(false);
       onClose();
 
-      // Optional: Show success message (you can implement a toast notification)
-      console.log('Blog post created successfully:', data.blog);
+      // Optional: Show success message
+      console.log(`Blog post ${isEditMode ? 'updated' : 'created'} successfully:`, data.blog);
 
     } catch (error) {
-      console.error('Error creating blog post:', error);
-      setError(error.message || 'Failed to create blog post. Please try again.');
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} blog post:`, error);
+      setError(error.message || `Failed to ${isEditMode ? 'update' : 'create'} blog post. Please try again.`);
     } finally {
       setIsLoading(false);
     }
@@ -180,6 +225,7 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
     });
     setShowPreview(true);
     setError('');
+    setIsEditMode(false);
   };
 
   const renderMarkdown = (text) => {
@@ -205,7 +251,9 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
       {/* Header */}
       <div className="border-b border-gray-200 p-4 flex items-center justify-between bg-white shadow-sm">
-        <h2 className="text-xl font-bold text-gray-800">Create New Post</h2>
+        <h2 className="text-xl font-bold text-gray-800">
+          {isEditMode ? 'Edit Post' : 'Create New Post'}
+        </h2>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowPreview(!showPreview)}
@@ -427,12 +475,12 @@ const CreatePostModal = ({ isOpen, onClose, onSave }) => {
                   {isLoading ? (
                     <>
                       <Loader2 size={16} className="animate-spin" />
-                      Saving...
+                      {isEditMode ? 'Updating...' : 'Saving...'}
                     </>
                   ) : (
                     <>
                       <Save size={16} />
-                      Save Post
+                      {isEditMode ? 'Update Post' : 'Save Post'}
                     </>
                   )}
                 </button>
