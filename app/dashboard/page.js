@@ -1,15 +1,21 @@
 'use client';
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
   const router = useRouter();
 
+  // Redirect to login if no token
+  useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      router.replace('/login');
+    }
+  }, [router]);
+
   const handleLogout = () => {
-    // Clear token from localStorage
     localStorage.removeItem('token');
-    // Redirect to login
-    router.push("/login");
+    router.replace("/login");
   };
 
   return (
