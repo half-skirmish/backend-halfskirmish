@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, AlertTriangle, LoaderCircle, Sparkles } from "lucide-react";
 
-// A small component for the input fields to reduce repetition
+// Reusable input component
 const FormInput = ({ icon: Icon, type, value, onChange, placeholder, autoComplete }) => (
   <div className="relative group">
     <Icon className="h-5 w-5 text-gray-500 absolute top-1/2 left-4 -translate-y-1/2 transition-colors duration-300 group-focus-within:text-cyan-400" />
@@ -40,14 +40,18 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
+      console.log("Login response:", data); // Debugging
 
-      if (!res.ok || data.error) {
+      if (!res.ok || !data.token) {
         setError(data.message || "Login failed. Please check your credentials.");
         return;
       }
-      
-      document.cookie = `token=${data.token}; path=/; max-age=${60 * 60 * 24}`; // 1 day expiry
-      router.replace("/dashboard");
+
+      // Store token
+      localStorage.setItem('token', data.token);
+
+      // Navigate to dashboard
+      router.push("/dashboard");
 
     } catch (err) {
       console.error(err);
@@ -66,18 +70,18 @@ export default function LoginPage() {
         <div className="absolute top-1/2 right-0 w-1/2 h-1/2 bg-purple-500/10 rounded-full filter blur-3xl animate-aurora animation-delay-30000"></div>
         <div className="absolute bottom-0 left-1/4 w-1/2 h-1/2 bg-blue-500/10 rounded-full filter blur-3xl animate-aurora animation-delay-15000"></div>
       </div>
-      
+
       {/* Main Login Card */}
       <main className="w-full max-w-md p-8 space-y-6 bg-gray-800/30 rounded-2xl shadow-2xl border border-gray-700 z-10 backdrop-filter backdrop-blur-xl motion-safe:animate-fade-in-up relative">
-         {/* Glow Effect */}
+        {/* Glow Effect */}
         <div className="absolute -top-px -left-px -right-px -bottom-px rounded-2xl bg-gradient-to-r from-cyan-500/20 via-transparent to-purple-500/20 pointer-events-none"></div>
-        
+
         <div className="text-center">
-            <div className="inline-block p-2 bg-gray-900/50 rounded-xl mb-4">
-                <Sparkles className="h-8 w-8 text-cyan-400" />
-            </div>
-            <h1 className="text-3xl font-bold text-white">Half Skirmish</h1>
-            <p className="text-gray-400 mt-2">Admin Panel Login</p>
+          <div className="inline-block p-2 bg-gray-900/50 rounded-xl mb-4">
+            <Sparkles className="h-8 w-8 text-cyan-400" />
+          </div>
+          <h1 className="text-3xl font-bold text-white">Half Skirmish</h1>
+          <p className="text-gray-400 mt-2">Admin Panel Login</p>
         </div>
 
         {/* Decorative Divider */}
