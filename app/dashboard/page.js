@@ -214,7 +214,7 @@ export default function DashboardPage() {
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">This Month</p>
+                  <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Posts This Month</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
                     {blogs.filter(blog => {
                       const blogDate = new Date(blog.createdAt);
